@@ -1,0 +1,3 @@
+[deployment]
+run = ["sh", "-c", "python main.py"]
+deploymentTarget = "gce"

@@ -1,0 +1,22 @@
+service:
+  name: "PDF Extraction Service"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+
+logging:
+  level: "INFO"
+  file_rotation: "1 day"
+  file_retention: "7 days"
+
+defaults:
+  county_name: "orangecounty"
+  document_type: "complaint"
+  date_to: "2025-01-01"
+
+paths:
+  patterns_dir: "patterns"
+  pdfs_dir: "pdfs"
+  outputs_dir: "outputs"
+  logs_dir: "logs"

@@ -1,0 +1,245 @@
+{
+  "county": "orangecounty",
+  "description": "Orange County, Florida court document extraction patterns",
+  "version": "1.0",
+  "patterns": {
+    "facts_date": {
+      "type": "facts_pattern",
+      "description": "Extract incident date from facts section",
+      "keywords": ["FACTS IN SUPPORT OF CLAIMS", "FACTS IN SUPPORT", "FACTS", "on or about"],
+      "position": "below",
+      "max_distance": 200,
+      "date_regex": "(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th|ST|ND|RD|TH)?,\\s+\\d{4}",
+      "extract_first_date": true
+    },
+    "facts_date_2": {
+      "type": "regex",
+      "description": "Extract 'on or about [date]' pattern",
+      "regex": "(?i)on or about\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "facts_date_3": {
+      "type": "regex",
+      "description": "Extract 'occurred on [date]' pattern",
+      "regex": "(?i)(?:occurred|happened|took place)\\s+on\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "incident_date_simple": {
+      "type": "regex",
+      "description": "Extract simple 'On [date]' pattern from incident descriptions",
+      "regex": "(?i)On\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "accident_date_pattern": {
+      "type": "regex",
+      "description": "Extract dates with accident/collision context",
+      "regex": "(?i)(?:accident|collision|crash|incident).*?(?:on|occurred|happened)\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "date_of_incident": {
+      "type": "regex",
+      "description": "Extract 'date of incident/accident' patterns",
+      "regex": "(?i)date\\s+of\\s+(?:the\\s+)?(?:incident|accident|collision|occurrence)\\s*:?\\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4})"
+    },
+    "at_time_pattern": {
+      "type": "regex", 
+      "description": "Extract 'at approximately [time] on [date]' patterns",
+      "regex": "(?i)at\\s+(?:approximately|about)\\s+\\d{1,2}:\\d{2}.*?on\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "subject_incident_date": {
+      "type": "regex",
+      "description": "Extract dates from 'subject incident' context",
+      "regex": "(?i)subject\\s+incident.*?(?:on|occurred|happened)\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "loss_date": {
+      "type": "regex",
+      "description": "Extract loss/damage dates",
+      "regex": "(?i)(?:loss|damage|injury)\\s+(?:occurred|sustained|happened)\\s+on\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})"
+    },
+    "case_number": {
+      "type": "nearest_word",
+      "description": "Extract case number",
+      "keywords": ["Case Number:", "Case No:", "Case #", "CASE NO:"],
+      "position": "right",
+      "max_distance": 100,
+      "regex": "\\d{4}-[A-Z]{2}-\\d{6}-[A-Z]"
+    },
+    "filed_date": {
+      "type": "nearest_word",
+      "description": "Extract filing date",
+      "keywords": ["Filed:", "Filing Date:", "Date Filed:"],
+      "position": "right",
+      "max_distance": 150,
+      "regex": "\\d{2}/\\d{2}/\\d{4}|\\d{4}-\\d{2}-\\d{2}"
+    },
+    "judge_name": {
+      "type": "nearest_word",
+      "description": "Extract judge name",
+      "keywords": ["Judge:", "Assigned Judge:", "Presiding Judge:"],
+      "position": "right",
+      "max_distance": 200,
+      "extract_words": 3
+    },
+    "case_type": {
+      "type": "nearest_word",
+      "description": "Extract case type",
+      "keywords": ["Case Type:", "Type:", "Case Category:"],
+      "position": "right",
+      "max_distance": 150,
+      "extract_until": ["\n", ",", ";"]
+    },
+    "plaintiff": {
+      "type": "section_pattern",
+      "description": "Extract plaintiff name",
+      "start_keywords": ["Plaintiff", "Petitioner"],
+      "end_keywords": ["vs.", "v.", "versus", "Defendant"],
+      "extract_type": "between"
+    },
+    "defendant": {
+      "type": "section_pattern",
+      "description": "Extract defendant name",
+      "start_keywords": ["vs.", "v.", "versus", "Defendant", "Respondent"],
+      "end_keywords": ["\n", "Attorney", "Represented by"],
+      "extract_type": "after_start"
+    },
+    "complaint_facts": {
+      "type": "section_pattern",
+      "description": "Extract facts section content",
+      "start_keywords": ["FACTS IN SUPPORT OF CLAIMS", "FACTS IN SUPPORT", "FACTS", "GENERAL ALLEGATIONS"],
+      "end_keywords": ["CAUSES OF ACTION", "FIRST CAUSE OF ACTION", "PRAYER", "WHEREFORE", "COUNT"],
+      "extract_type": "between",
+      "include_dates": true
+    },
+    "description": {
+      "type": "case_title",
+      "description": "Extract case title/description",
+      "keywords": ["vs.", "v.", "versus"],
+      "extract_full_title": true,
+      "format": "PLAINTIFF vs. DEFENDANT"
+    },
+    "numeric_date": {
+      "type": "regex",
+      "description": "Extract numeric date format MM/DD/YYYY",
+      "regex": "\\d{1,2}/\\d{1,2}/\\d{4}"
+    },
+    "advanced_incident_date": {
+      "type": "multi_pattern",
+      "description": "Advanced multi-pattern incident date extraction with scoring",
+      "patterns": [
+        {
+          "regex": "(?i)on or about\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})",
+          "weight": 3.0,
+          "description": "High priority: on or about [full date]"
+        },
+        {
+          "regex": "(?i)on\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})",
+          "weight": 2.5,
+          "description": "High priority: on [full date]"
+        },
+        {
+          "regex": "(?i)occurred\\s+on\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})",
+          "weight": 2.8,
+          "description": "High priority: occurred on [date]"
+        },
+        {
+          "regex": "(?i)at\\s+approximately\\s+\\d{1,2}:\\d{2}.{0,20}on\\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4})",
+          "weight": 2.2,
+          "description": "Medium priority: at time on [date]"
+        },
+        {
+          "regex": "(\\d{1,2}/\\d{1,2}/\\d{4})",
+          "weight": 1.0,
+          "description": "Low priority: numeric date fallback"
+        }
+      ]
+    },
+    "contextual_incident_search": {
+      "type": "contextual_search",
+      "description": "Smart contextual search for incident dates",
+      "primary_keywords": ["incident", "accident", "collision", "occurred", "happened"],
+      "secondary_keywords": ["facts", "allegations", "on or about", "approximately"],
+      "target_patterns": [
+        "(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4}",
+        "\\d{1,2}/\\d{1,2}/\\d{4}"
+      ],
+      "search_radius": 300
+    },
+    "fuzzy_incident_date": {
+      "type": "fuzzy_date",
+      "description": "Fuzzy matching for incident dates with variations",
+      "base_patterns": [
+        "on\\s+or\\s+about\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4}",
+        "occurred\\s+on\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4}"
+      ],
+      "context_keywords": ["facts", "incident", "accident", "allegations"]
+    },
+    "multiple_dates_extractor": {
+      "type": "multi_date",
+      "description": "Extract all dates from document for comprehensive timeline",
+      "date_patterns": [
+        "(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?,\\s+\\d{4}",
+        "\\d{1,2}/\\d{1,2}/\\d{4}",
+        "\\d{1,2}-\\d{1,2}-\\d{4}"
+      ],
+      "context_radius": 50,
+      "incident_indicators": ["fell", "fall", "injury", "accident", "incident", "collision", "died", "death", "admitted", "occurred", "happened"]
+    }
+  },
+  "extraction_order": [
+    "case_number",
+    "description", 
+    "case_type",
+    "judge_name",
+    "filed_date",
+    "plaintiff",
+    "defendant",
+    "multiple_dates_extractor",
+    "advanced_incident_date",
+    "contextual_incident_search",
+    "fuzzy_incident_date",
+    "facts_date_2",
+    "incident_date_simple",
+    "accident_date_pattern",
+    "date_of_incident",
+    "at_time_pattern",
+    "subject_incident_date",
+    "loss_date",
+    "facts_date_3",
+    "facts_date",
+    "numeric_date",
+    "complaint_facts"
+  ],
+  "pattern_documentation": {
+    "regex": {
+      "description": "Direct regex pattern matching against full document text",
+      "parameters": {
+        "regex": "Regular expression pattern to match",
+        "flags": "Optional regex flags (default: IGNORECASE)"
+      }
+    },
+    "nearest_word": {
+      "description": "Find text near specific keywords using positional data",
+      "parameters": {
+        "keywords": "List of keywords to search for",
+        "position": "Where to look for text (right, left, below, above)",
+        "max_distance": "Maximum pixel distance to search",
+        "extract_words": "Number of words to extract (default: 1)",
+        "extract_until": "Stop extraction at these delimiters",
+        "regex": "Optional regex to validate extracted text"
+      }
+    },
+    "section_pattern": {
+      "description": "Extract text between start and end keywords",
+      "parameters": {
+        "start_keywords": "Keywords that mark section start",
+        "end_keywords": "Keywords that mark section end",
+        "extract_type": "How to extract (between, after_start, before_end)"
+      }
+    },
+    "facts_pattern": {
+      "description": "Extract dates from facts sections using keyword proximity",
+      "parameters": {
+        "keywords": "Keywords to locate facts section",
+        "date_regex": "Regex pattern to match dates",
+        "position": "Where to search relative to keywords",
+        "max_distance": "Maximum characters to search"
+      }
+    }
+  }
+}
