@@ -1,6 +1,6 @@
 
 [deployment]
-run = ["python3", "main.py"]
+run = ["bash", "-c", "source ~/.bashrc && python3 main.py"]
 deploymentTarget = "gce"
 
 [workflows]
