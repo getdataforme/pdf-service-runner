@@ -22,7 +22,7 @@ port = int(os.environ.get('PORT', 8000))
 
 if __name__ == "__main__":
     # Import the FastAPI app
-    from main import app
+    from src.main import app
 
     print("🚀 Starting PDF Extraction Service...")
     print(f"Server will be available on port {port}")

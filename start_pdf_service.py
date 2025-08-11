@@ -88,15 +88,16 @@ def main():
         print("   • GET /jobs - List all jobs")
         print("   • GET / - Service information")
         print()
-        print("🌐 Server starting on http://localhost:8000")
-        print("📖 API Documentation: http://localhost:8000/docs")
+        print("🌐 Server starting on http://localhost:5000")
+        print("📖 API Documentation: http://localhost:5000/docs")
         print("=" * 60)
         
         # Start the server
+        port = int(os.environ.get('PORT', 5000))
         uvicorn.run(
             app,
             host="0.0.0.0",
-            port=8000,
+            port=port,
             log_level="info",
             access_log=True
         )

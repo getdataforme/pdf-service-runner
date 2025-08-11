@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 import uvicorn
+import os
 from src.models.request_models import PDFRequestModel, IndividualPDFRequestModel
 from src.models.view_models import PDFViewRequestModel
 from src.service.pdf_service import PDFService
@@ -299,11 +300,12 @@ async def run_pdf_extraction(job_id: str, county_name: str, document_type: str,
 
 def main():
     """Main entry point for the service."""
+    # Use port 5000 for Replit, fallback to 8000
+    port = int(os.environ.get('PORT', 5000))
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
-        # reload=True,
+        port=port,
         log_level="info"
     )
 

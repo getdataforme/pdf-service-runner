@@ -1,6 +1,6 @@
 
 [deployment]
-run = ["python3", "main.py"]
+run = ["python3", "start_pdf_service.py"]
 deploymentTarget = "gce"
 
 [workflows]
@@ -13,4 +13,8 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 main.py"
+args = "python3 start_pdf_service.py"
+
+[nix]
+channel = "stable-25_05"
+packages = ["libxcrypt"]
