@@ -1,0 +1,69 @@
+2025-08-11T07:39:18Z info: Deployment: 45009560-5ffb-4e78-a175-0ea0be8db64e
+2025-08-11T07:39:18Z info: Build: 0732a118-98ef-4e07-8424-ea336144becf
+2025-08-11T07:39:18Z info: Connecting to builder
+2025-08-11T07:39:19Z info: Builder connected
+2025-08-11T07:39:19Z info: Skipping Build as no Build command set
+2025-08-11T07:39:19Z info: Pushing pid1 binary layer...
+2025-08-11T07:39:20Z info: Pushing Repl layer...
+2025-08-11T07:39:20Z info: Pushing hosting layer...
+2025-08-11T07:39:20Z info: Created hosting layer
+2025-08-11T07:39:20Z info: Created Repl layer
+2025-08-11T07:39:21Z info: Created pid1 binary layer
+2025-08-11T07:39:21Z info: Pushed image manifest
+2025-08-11T07:39:22Z info: Pushed soci index manifest
+2025-08-11T07:39:27Z info: Creating virtual machine
+2025-08-11T07:39:18Z info: Deployment: 45009560-5ffb-4e78-a175-0ea0be8db64e
+2025-08-11T07:39:18Z info: Build: 0732a118-98ef-4e07-8424-ea336144becf
+2025-08-11T07:39:18Z info: Connecting to builder
+2025-08-11T07:39:19Z info: Builder connected
+2025-08-11T07:39:19Z info: Skipping Build as no Build command set
+2025-08-11T07:39:19Z info: Pushing pid1 binary layer...
+2025-08-11T07:39:20Z info: Pushing Repl layer...
+2025-08-11T07:39:20Z info: Pushing hosting layer...
+2025-08-11T07:39:20Z info: Created hosting layer
+2025-08-11T07:39:20Z info: Created Repl layer
+2025-08-11T07:39:21Z info: Created pid1 binary layer
+2025-08-11T07:39:21Z info: Pushed image manifest
+2025-08-11T07:39:22Z info: Pushed soci index manifest
+2025-08-11T07:39:27Z info: Creating virtual machine
+2025-08-11T07:39:42Z info: Virtual machine created
+2025-08-11T07:39:42Z info: Waiting for deployment to be ready
+starting up user application
+command finished with error [sh -c python main.py]: exit status 127
+command finished with error [sh -c python main.py]: exit status 127
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+sh: 1: python: not found
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+crash loop detected
+command finished with error [sh -c python main.py]: exit status 127
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+python: not found
+starting up user application
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+command finished with error [sh -c python main.py]: exit status 127
+command finished with error [sh -c python main.py]: exit status 127
+sh: 1: python: not found
+sh: 1: python: not found
+sh: 1: 
+sh: 1: python: not found
+command finished with error [sh -c python main.py]: exit status 127
+2025-08-11T07:40:33Z error: The deployment is crash looping. This can happen if the run command fails or exits immediately after starting. Check the logs for more information.
