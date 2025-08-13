@@ -71,7 +71,7 @@ def download_file(key, local_path, bucket_name=None):
         bucket_name = os.getenv("GCS_BUCKET_NAME")
     if not bucket_name:
         raise ValueError("Missing GCS bucket name in environment variables.")
-    
+
     client = get_gcs_client()
     try:
         bucket = client.bucket(bucket_name)
@@ -154,11 +154,12 @@ def update_document_with_extraction_results(doc_id, extraction_results, db_name=
         # Find matching document in documents array
         for doc in document.get("documents", []):
             if doc.get("doc_path") == doc_path:
-                # Update incident dates
+                # Update incident dates and emails
                 update_data = {
                     "$set": {
                         f"documents.$.incident_date": extraction_results.get("incident_date"),
-                        f"documents.$.incident_end_date": extraction_results.get("incident_end_date")
+                        f"documents.$.incident_end_date": extraction_results.get("incident_end_date"),
+                        f"documents.$.emails": extraction_results.get("emails")
                     }
                 }
                 result = collection.update_one(
@@ -181,52 +182,52 @@ def update_document_with_extraction_results(doc_id, extraction_results, db_name=
 def download_pdfs_from_gcp(county_name, document_type, date_to, date_from=None):
     """
     Download PDFs from GCP bucket to the local 'pdfs' folder.
-    
+
     Args:
         county_name (str): Name of the county
         document_type (str): Type of document to filter by
         date_to (str): End date in YYYY-MM-DD format
         date_from (str, optional): Start date in YYYY-MM-DD format
-        
+
     Returns:
         dict: Mapping of PDF filenames to document metadata
     """
-    
+
     pdfs_folder = Path("pdfs")
     pdfs_folder.mkdir(exist_ok=True)
-    
+
     print(f"Starting PDF download for:")
     print(f"  County: {county_name}")
     print(f"  Document Type: {document_type}")
     print(f"  Date To: {date_to}")
-    
+
     # If date_from is not provided, use a default date (e.g., 1 year ago)
     if date_from is None:
         date_to_obj = datetime.strptime(date_to, "%Y-%m-%d")
         date_from_obj = date_to_obj - timedelta(days=365)  # 1 year before date_to
         date_from = date_from_obj.strftime("%Y-%m-%d")
-    
+
     print(f"  Date From: {date_from}")
-    
+
     # MongoDB query to fetch the document of specific type
     query = {
         "court_name": {"$regex": county_name, "$options": "i"},
         "documents.description": {"$regex": document_type, "$options": "i"}
     }
-    
+
 
     print(f"MongoDB query: {query}")
 
     db_name = "courts-database"
     collection_name = "allcourts"
-    
+
     try:
         documents = find_many(query, db_name, collection_name)
         print(f"Found {len(documents)} documents in MongoDB")
     except Exception as e:
         print(f"Error querying MongoDB: {e}")
         return {}
-    
+
     # Extract keys from documents with their MongoDB document IDs
     pdfs_key_from_mongo = [
         {"doc_id": str(document["_id"]), "doc_path": doc["doc_path"]} 
@@ -241,7 +242,7 @@ def download_pdfs_from_gcp(county_name, document_type, date_to, date_from=None):
     # ]
 
     print(f"Found {len(pdfs_key_from_mongo)} PDF keys to download")
-    
+
     if not pdfs_key_from_mongo:
         print("No PDFs found to download. This could be because:")
         print("1. No documents match the county name, document type, or date range")
@@ -267,22 +268,22 @@ def download_pdfs_from_gcp(county_name, document_type, date_to, date_from=None):
         try:
             download_file(key, str(local_path))
             print(f"✓ Downloaded {key} (doc_id: {doc_id}) to {local_path}")
-            
+
             # Use the local filename as the mapping key to ensure perfect matching
             local_filename = Path(local_path).name
             print(f"  Mapping key: {local_filename}")
-            
+
             # Add to mapping using the local filename as key
             pdf_mapping[local_filename] = {
                 "doc_id": doc_id,
                 "original_path": key,
                 "local_path": str(local_path)
             }
-            
+
             downloaded_count += 1
         except Exception as e:
             print(f"✗ Failed to download {key} (doc_id: {doc_id}): {e}")
-    
+
     # Save the mapping file
     with open(mapping_file, 'w', encoding='utf-8') as f:
         json.dump(pdf_mapping, f, indent=2, ensure_ascii=False)
@@ -290,7 +291,7 @@ def download_pdfs_from_gcp(county_name, document_type, date_to, date_from=None):
     print(f"Mapping contains {len(pdf_mapping)} entries:")
     for key, value in pdf_mapping.items():
         print(f"  {key} -> doc_id: {value['doc_id']}")
-    
+
     print(f"Download complete: {downloaded_count}/{len(pdfs_key_from_mongo)} files downloaded successfully")
-    
+
     return pdf_mapping  # Return the mapping for further processing
