@@ -81,7 +81,7 @@ class Config:
             },
             "database": {
                 "mongodb": {
-                    "uri": os.getenv("MONGO_URI"),
+                    "uri": os.getenv("MONGODB_CONNECTION_STRING"),
                     "database": "courts-database",
                     "collection": "allcourts",
                     "connection_timeout": 10000
@@ -175,7 +175,7 @@ class Config:
         Returns:
             True if configuration is valid, False otherwise
         """
-        required_env_vars = ['MONGO_URI', 'GCS_BUCKET_NAME', 'GCP_CREDENTIALS_JSON']
+        required_env_vars = ['MONGODB_CONNECTION_STRING', 'GCS_BUCKET_NAME', 'GCP_CREDENTIALS_JSON']
         missing_vars = []
         
         for var in required_env_vars:

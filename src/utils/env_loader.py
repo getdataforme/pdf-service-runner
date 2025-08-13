@@ -46,14 +46,14 @@ def load_root_env():
                         # Set environment variable
                         os.environ[key] = value
                         
-                        # Map MONGODB_CONNECTION_STRING to MONGO_URI for compatibility
+                        # Map MONGODB_CONNECTION_STRING to MONGODB_CONNECTION_STRING for compatibility
                         if key == 'MONGODB_CONNECTION_STRING':
-                            os.environ['MONGO_URI'] = value
+                            os.environ['MONGODB_CONNECTION_STRING'] = value
             
             print(f"Loaded environment variables from {env_file}")
             print(f"DATABASE_URL configured: {bool(os.getenv('DATABASE_URL'))}")
             print(f"MONGODB_CONNECTION_STRING configured: {bool(os.getenv('MONGODB_CONNECTION_STRING'))}")
-            print(f"MONGO_URI configured: {bool(os.getenv('MONGO_URI'))}")
+            print(f"MONGODB_CONNECTION_STRING configured: {bool(os.getenv('MONGODB_CONNECTION_STRING'))}")
             print(f"GCS_BUCKET_NAME configured: {bool(os.getenv('GCS_BUCKET_NAME'))}")
             
         else:

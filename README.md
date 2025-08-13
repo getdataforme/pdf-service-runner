@@ -69,7 +69,7 @@ pdf-service-runner/
 3. **Set up environment variables:**
    Create a `.env` file with:
    ```env
-   MONGO_URI=mongodb://your-mongodb-uri
+   MONGODB_CONNECTION_STRING=mongodb://your-mongodb-uri
    GCS_BUCKET_NAME=your-gcs-bucket-name
    GCP_CREDENTIALS_JSON={"type":"service_account",...}
    ```
@@ -190,7 +190,7 @@ docker build -t pdf-extraction-service .
 
 # Run the container
 docker run -p 8000:8000 \
-  -e MONGO_URI=your-mongo-uri \
+  -e MONGODB_CONNECTION_STRING=your-mongo-uri \
   -e GCS_BUCKET_NAME=your-bucket \
   -e GCP_CREDENTIALS_JSON='your-credentials-json' \
   pdf-extraction-service

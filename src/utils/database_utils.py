@@ -20,7 +20,7 @@ import re
 # Load environment from root .env file
 from .env_loader import load_root_env
 
-load_root_env()  # This will ensure MONGO_URI is available
+load_root_env()  # This will ensure MONGODB_CONNECTION_STRING is available
 
 
 def print_header(text: str):
@@ -90,10 +90,10 @@ def get_mongo_client():
     Returns:
         MongoClient: Configured MongoDB client.
     """
-    mongo_uri = os.getenv("MONGO_URI")
-    if not mongo_uri:
-        raise ValueError("Missing MONGO_URI environment variable.")
-    return MongoClient(mongo_uri)
+    MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
+    if not MONGODB_CONNECTION_STRING:
+        raise ValueError("Missing MONGODB_CONNECTION_STRING environment variable.")
+    return MongoClient(MONGODB_CONNECTION_STRING)
 
 
 def find_many(query, db_name, collection_name="cases"):
