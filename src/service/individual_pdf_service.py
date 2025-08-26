@@ -9,8 +9,10 @@ import os
 import json
 import asyncio
 import psycopg2
+import pdfplumber
+from difflib import SequenceMatcher
 from urllib.parse import urlparse
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 from datetime import datetime
 
@@ -46,6 +48,155 @@ class IndividualPDFService:
 
         # PostgreSQL connection configuration from DATABASE_URL
         self.pg_config = self._parse_database_url()
+        
+    def normalize_text(self, text: str) -> str:
+        """
+        Normalize text by converting to lowercase, removing extra whitespace and punctuation.
+        
+        Args:
+            text: The text to normalize
+            
+        Returns:
+            Normalized text string
+        """
+        text = text.lower()
+        
+        # Remove extra whitespace and standardize
+        text = ' '.join(text.split())
+        
+        # Remove common punctuation
+        for char in '.,;:!?()[]{}"\'\\-_':
+            text = text.replace(char, '')
+        
+        return text
+        
+    def extract_plaintiff_contact(self, pdf_path: str) -> Optional[str]:
+        """
+        Extract plaintiff contact information from a PDF.
+        
+        Args:
+            pdf_path: Local path to the PDF file
+            
+        Returns:
+            Extracted plaintiff contact as a single text string, or None if not found
+        """
+        try:
+            self.logger.info(f"Extracting plaintiff contact from PDF: {pdf_path}")
+            
+            with pdfplumber.open(pdf_path) as pdf:
+                full_text = ""
+                all_chars = []
+                char_to_page = []  # Track which page each character belongs to
+
+                # Collect all characters with their page info
+                for page_idx, page in enumerate(pdf.pages):
+                    chars = page.chars
+                    if chars:
+                        all_chars.extend(chars)
+                        char_to_page.extend([page_idx] * len(chars))
+                    page_text = page.extract_text()
+                    if page_text:
+                        full_text += page_text + "\n"
+
+                # Trigger phrases
+                trigger_phrases = [
+                    "PLAINTIFF HEREBY DEMANDSA JURYTRIAL ON ALL ISSUES SO TRIABLE.",
+                    "Plaintiff demands trial by jury on all issues triable as of right."
+                ]
+                alternative_triggers = []
+                all_triggers = trigger_phrases + alternative_triggers
+
+                # Find trigger by checking line by line
+                trigger_index = -1
+                all_lines = full_text.split('\n')
+                cumulative_length = 0
+                
+                for line in all_lines:
+                    # Check exact match first
+                    found_exact = False
+                    for phrase in all_triggers:
+                        if phrase in line:
+                            trigger_index = cumulative_length + line.find(phrase)
+                            found_exact = True
+                            break
+                    
+                    if found_exact:
+                        break
+                        
+                    # If no exact match, try fuzzy matching
+                    normalized_line = self.normalize_text(line)
+                    for phrase in all_triggers:
+                        normalized_phrase = self.normalize_text(phrase)
+                        similarity = SequenceMatcher(None, normalized_phrase, normalized_line).ratio()
+                        if similarity > 0.8:
+                            print(f"Fuzzy match found: '{line}' matches '{phrase}' with similarity {similarity:.2f}")
+                            trigger_index = cumulative_length
+                            found_exact = True
+                            break
+                    
+                    if found_exact:
+                        break
+                        
+                    # Add line length plus newline character for cumulative position tracking
+                    cumulative_length += len(line) + 1
+                
+                if trigger_index == -1:
+                    print("No trigger phrases found in document")
+                    return None
+
+                
+                # Get the contact text after the trigger
+                contact_text = full_text[trigger_index:trigger_index + 500]
+                if contact_text:
+                    # Clean the contact text
+                    cleaned_contact = self.clean_contact(contact_text)
+                
+                # Join the cleaned contact lines into a single string
+                if cleaned_contact:
+                    result = "\n".join(cleaned_contact)
+                    self.logger.info(f"Successfully extracted plaintiff contact: {result[:100]}...")
+                    return result
+                
+                self.logger.warning("Plaintiff contact extraction found trigger but could not extract clean contact")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error extracting plaintiff contact: {str(e)}")
+            return None
+    
+    def clean_contact(self, text: str) -> List[str]:
+        """
+        Clean the extracted contact text by removing unwanted lines and cutoff at certain terms.
+        
+        Args:
+            text: The raw extracted contact text
+            
+        Returns:
+            List of cleaned contact text lines
+        """
+        result = []
+        cutoff_terms = [
+            'attorneys for plaintiff', 'benefits', 'explanation', 
+            'patient', 'transaction', 'history', 'charges'
+        ]
+        remove_terms = [
+            'hereby', 'demands', 'jury', 'trial', 
+            'issues', 'triable', 'respectfully', 'submitted', 'this'
+        ]
+        
+        for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+                
+            line_lower = line.lower()
+            if any(term in line_lower for term in remove_terms):
+                continue  # skip this line entirely
+            if any(term in line_lower for term in cutoff_terms):
+                break  # stop processing anything further
+            result.append(line)
+        
+        return result
 
     def _parse_database_url(self) -> Dict[str, str]:
         """
@@ -142,6 +293,14 @@ class IndividualPDFService:
 
             # Step 2: Extract data using the original PDFCourtExtractor method
             extraction_result = await self._extract_using_original_method(local_pdf_path, doc_path)
+            
+            # Step 2b: Extract plaintiff contact information
+            plaintiff_contact = self.extract_plaintiff_contact(local_pdf_path)
+            if plaintiff_contact:
+                extraction_result['plaintiff_contact'] = plaintiff_contact
+                self.logger.info(f"Added plaintiff contact information to extraction result")
+            else:
+                self.logger.warning(f"No plaintiff contact information found in {doc_path}")
 
             # Step 3: Save individual result (following original batch procedure)
             self._save_individual_result(extraction_result)
@@ -372,19 +531,21 @@ class IndividualPDFService:
         try:
             self.logger.info(f"Updating PostgreSQL case {case_id} document {doc_path}")
 
-            # Extract incident dates and emails from the extraction result
+            # Extract incident dates, emails, and plaintiff contact from the extraction result
             incident_date = extraction_result.get('incident_date')
             incident_end_date = extraction_result.get('incident_end_date')
             emails = extraction_result.get('emails')
+            plaintiff_contact = extraction_result.get('plaintiff_contact')
 
             # Debug: Log what we extracted
             self.logger.info(f"Extracted for PostgreSQL update:")
             self.logger.info(f"  incident_date: {incident_date}")
             self.logger.info(f"  incident_end_date: {incident_end_date}")
             self.logger.info(f"  emails: {emails}")
+            self.logger.info(f"  plaintiff_contact: {plaintiff_contact[:100] if plaintiff_contact else None}")
 
-            if not incident_date and not incident_end_date and not emails:
-                self.logger.warning(f"No incident dates or emails found in extraction result for {doc_path}")
+            if not incident_date and not incident_end_date and not emails and not plaintiff_contact:
+                self.logger.warning(f"No incident dates, emails, or plaintiff contact found in extraction result for {doc_path}")
                 return False
 
             # Run the database update in a thread with retry logic
@@ -400,6 +561,7 @@ class IndividualPDFService:
                         incident_date,
                         incident_end_date,
                         emails,
+                        plaintiff_contact,
                         extraction_result.get('extraction_timestamp')
                     )
 
@@ -426,7 +588,8 @@ class IndividualPDFService:
             return False
 
     def _update_postgresql_sync(self, case_id: str, doc_path: str, incident_date: str, 
-                               incident_end_date: str, emails: str, extraction_timestamp: str) -> bool:
+                               incident_end_date: str, emails: str, plaintiff_contact: str,
+                               extraction_timestamp: str) -> bool:
         """
         Synchronous PostgreSQL update function to run in executor.
         """
@@ -476,13 +639,20 @@ class IndividualPDFService:
                         doc['incident_end_date'] = incident_end_date
                         self.logger.info(f"Updated incident_end_date to: {incident_end_date}")
 
-                        # Update emails
+                    # Update emails
                     self.logger.info(f"Emails parameter received: {emails}")
                     if emails:
                         doc['emails'] = emails
                         self.logger.info(f"Updated emails to: {emails}")
                     else:
                         self.logger.info("No emails to update (emails parameter is None or empty)")
+                        
+                    # Update plaintiff contact
+                    if plaintiff_contact:
+                        doc['plaintiff_contact'] = plaintiff_contact
+                        self.logger.info(f"Updated plaintiff_contact (length: {len(plaintiff_contact)} chars)")
+                    else:
+                        self.logger.info("No plaintiff contact to update (plaintiff_contact parameter is None or empty)")
 
                     # Add extraction metadata
                     doc['extraction_timestamp'] = extraction_timestamp
@@ -579,6 +749,7 @@ class IndividualPDFService:
                 "incident_source_field": extraction_result.get("incident_source_field"),
                 "all_incident_dates": extraction_result.get("all_incident_dates", []),
                 "emails": extraction_result.get("emails"),
+                "plaintiff_contact": extraction_result.get("plaintiff_contact"),
                 "extracted_data": extraction_result.get("extracted_data", {}),
                 "original_gcs_path": extraction_result.get("original_gcs_path"),
             })
@@ -596,7 +767,7 @@ class IndividualPDFService:
                 updates.append('PostgreSQL')
 
             if updates:
-                response["message"] = f"Successfully extracted incident dates and emails for {document_description} (Updated: {' & '.join(updates)})"
+                response["message"] = f"Successfully extracted incident dates, emails, and plaintiff contact for {document_description} (Updated: {' & '.join(updates)})"
             else:
                 response["message"] = f"Successfully extracted data from {document_description}"
         else:
