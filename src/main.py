@@ -301,7 +301,7 @@ async def run_pdf_extraction(job_id: str, county_name: str, document_type: str,
 def main():
     """Main entry point for the service."""
     # Use port 5000 for Replit, fallback to 8000
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8000))
     uvicorn.run(
         app,
         host="0.0.0.0",

@@ -159,7 +159,8 @@ def update_document_with_extraction_results(doc_id, extraction_results, db_name=
                     "$set": {
                         f"documents.$.incident_date": extraction_results.get("incident_date"),
                         f"documents.$.incident_end_date": extraction_results.get("incident_end_date"),
-                        f"documents.$.emails": extraction_results.get("emails")
+                        f"documents.$.emails": extraction_results.get("emails"),
+                        f"documents.$.plaintiff_contact": extraction_results.get("plaintiff_contact")
                     }
                 }
                 result = collection.update_one(

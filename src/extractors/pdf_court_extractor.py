@@ -13,6 +13,8 @@ Extracts:
 import os
 import json
 import csv
+import pdfplumber
+from difflib import SequenceMatcher
 from pdfminer.high_level import extract_text, extract_pages
 from pdfminer.layout import LTTextBox, LTTextLine
 from typing import Dict, List, Any, Optional
@@ -38,6 +40,27 @@ class PDFCourtExtractor:
 
         if patterns_file and os.path.exists(patterns_file):
             self.load_patterns(patterns_file)
+            
+    def normalize_text(self, text: str) -> str:
+        """
+        Normalize text by converting to lowercase, removing extra whitespace and punctuation.
+        
+        Args:
+            text: The text to normalize
+            
+        Returns:
+            Normalized text string
+        """
+        text = text.lower()
+        
+        # Remove extra whitespace and standardize
+        text = ' '.join(text.split())
+        
+        # Remove common punctuation
+        for char in '.,;:!?()[]{}"\'\\-_':
+            text = text.replace(char, '')
+        
+        return text
 
     def load_patterns(self, patterns_file: str):
         """Load extraction patterns from JSON file"""
@@ -46,6 +69,147 @@ class PDFCourtExtractor:
             self.patterns = data.get('patterns', {})
             self.county = data.get('county', '')
             self.extraction_order = data.get('extraction_order', list(self.patterns.keys()))
+            
+    def normalize_text(self, text: str) -> str:
+        """
+        Normalize text by converting to lowercase, removing extra whitespace and punctuation.
+        
+        Args:
+            text: The text to normalize
+            
+        Returns:
+            Normalized text string
+        """
+        text = text.lower()
+        
+        # Remove extra whitespace and standardize
+        text = ' '.join(text.split())
+        
+        # Remove common punctuation
+        for char in '.,;:!?()[]{}"\'\\-_':
+            text = text.replace(char, '')
+        
+        return text
+        
+    def extract_plaintiff_contact(self, pdf_path: str) -> Optional[str]:
+        """
+        Extract plaintiff contact information from a PDF.
+        
+        Args:
+            pdf_path: Local path to the PDF file
+            
+        Returns:
+            Extracted plaintiff contact as a single text string, or None if not found
+        """
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                full_text = ""
+                
+                # Extract text from all pages
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        full_text += page_text + "\n"
+                
+                # Trigger phrases for finding contact info
+                trigger_phrases = [
+                    "PLAINTIFF HEREBY DEMANDSA JURYTRIAL ON ALL ISSUES SO TRIABLE.",
+                    "Plaintiff demands trial by jury on all issues triable as of right."
+                ]
+                alternative_triggers = [
+                    "jury demand",
+                    "jury trial demanded",
+                    "plaintiff demands",
+                    "plaintiff hereby demands"
+                ]
+                all_triggers = trigger_phrases + alternative_triggers
+                
+                # Find trigger by checking line by line
+                trigger_index = -1
+                all_lines = full_text.split('\n')
+                cumulative_length = 0
+                
+                for line in all_lines:
+                    # Check exact match first
+                    found_exact = False
+                    for phrase in all_triggers:
+                        if phrase.lower() in line.lower():
+                            trigger_index = cumulative_length + line.lower().find(phrase.lower())
+                            found_exact = True
+                            break
+                    
+                    if found_exact:
+                        break
+                        
+                    # If no exact match, try fuzzy matching
+                    normalized_line = self.normalize_text(line)
+                    for phrase in all_triggers:
+                        normalized_phrase = self.normalize_text(phrase)
+                        similarity = SequenceMatcher(None, normalized_phrase, normalized_line).ratio()
+                        if similarity > 0.8:
+                            trigger_index = cumulative_length
+                            found_exact = True
+                            break
+                    
+                    if found_exact:
+                        break
+                        
+                    # Add line length plus newline character for cumulative position tracking
+                    cumulative_length += len(line) + 1
+                
+                if trigger_index == -1:
+                    return None
+                
+                # Get the contact text after the trigger
+                contact_text = full_text[trigger_index:trigger_index + 500]
+                
+                # Clean the contact text
+                cleaned_contact = self.clean_contact(contact_text)
+                
+                # Join the cleaned contact lines into a single string
+                if cleaned_contact:
+                    result = "\n".join(cleaned_contact)
+                    return result
+                
+                return None
+                
+        except Exception as e:
+            print(f"Error extracting plaintiff contact: {str(e)}")
+            return None
+    
+    def clean_contact(self, text: str) -> List[str]:
+        """
+        Clean the extracted contact text by removing unwanted lines and cutoff at certain terms.
+        
+        Args:
+            text: The raw extracted contact text
+            
+        Returns:
+            List of cleaned contact text lines
+        """
+        result = []
+        cutoff_terms = [
+            'attorneys for plaintiff', 'benefits', 'explanation', 
+            'patient', 'transaction', 'history', 'charges'
+        ]
+        remove_terms = [
+            'hereby', 'demands', 'jury', 'trial', 
+            'issues', 'triable', 'respectfully', 'submitted', 'this'
+        ]
+        
+        for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+                
+            line_lower = line.lower()
+            if any(term in line_lower for term in remove_terms):
+                continue  # skip this line entirely
+            if any(term in line_lower for term in cutoff_terms):
+                break  # stop processing anything further
+            result.append(line)
+        
+        return result
 
     def extract_text_from_pdf(self, pdf_path: str) -> tuple[str, List[Dict]]:
         """
@@ -101,6 +265,15 @@ class PDFCourtExtractor:
         # Extract emails automatically
         emails = self._extract_emails({}, full_text)
 
+        # Extract plaintiff contact information
+        plaintiff_contact = None
+        try:
+            plaintiff_contact = self.extract_plaintiff_contact(pdf_path)
+            if plaintiff_contact:
+                print(f"Successfully extracted plaintiff contact information")
+        except Exception as e:
+            print(f"Error extracting plaintiff contact: {str(e)}")
+
         # Initialize results
         results = {
             'pdf_file': os.path.basename(pdf_path),
@@ -109,6 +282,7 @@ class PDFCourtExtractor:
             'incident_end_date': None,
             'all_incident_dates': [],
             'emails': emails,
+            'plaintiff_contact': plaintiff_contact,
             'extraction_timestamp': datetime.now().isoformat(),
             'extracted_data': {}
         }
